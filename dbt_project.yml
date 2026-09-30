@@ -1,0 +1,29 @@
+name: nyc_taxi_analytics
+version: '1.0.0'
+config-version: 2
+
+profile: nyc_taxi_analytics
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # Overridden in CI to point at the small synthetic fixture instead of
+  # the real (gitignored) monthly trip files -- see data/README.md and
+  # .github/workflows/ci.yml.
+  raw_data_path: "data/raw"
+
+models:
+  nyc_taxi_analytics:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

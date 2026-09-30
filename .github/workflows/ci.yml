@@ -1,0 +1,48 @@
+name: dbt build CI
+
+# Runs dbt build TWICE against small synthetic fixtures (data/sample/) --
+# once with only the "January" fixture present, then again with
+# "February" added -- specifically so this actually exercises the
+# incremental model and the SCD Type 2 snapshot logic across two runs,
+# not just proves the SQL compiles. The real monthly Parquet files aren't
+# committed to this repo (see data/README.md).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt-core and dbt-duckdb
+        run: pip install dbt-core dbt-duckdb
+
+      - name: Install dbt packages
+        run: dbt deps
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}
+
+      - name: Stage 1 -- January fixture only, full build
+        run: |
+          mkdir -p /tmp/ci_raw
+          cp data/sample/sample_2024-01.parquet /tmp/ci_raw/yellow_tripdata_2024-01.parquet
+          cp data/sample/sample_taxi_zone_lookup.csv /tmp/ci_raw/taxi_zone_lookup.csv
+          dbt build --target ci --vars '{"raw_data_path": "/tmp/ci_raw"}'
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}
+
+      - name: Stage 2 -- February fixture added, incremental build
+        run: |
+          cp data/sample/sample_2024-02.parquet /tmp/ci_raw/yellow_tripdata_2024-02.parquet
+          dbt build --target ci --vars '{"raw_data_path": "/tmp/ci_raw"}'
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}

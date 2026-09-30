@@ -1,0 +1,9 @@
+LocationID,Borough,Zone,service_zone
+1,Manhattan,Downtown,Yellow Zone
+2,Manhattan,Midtown,Yellow Zone
+3,Brooklyn,Williamsburg,Boro Zone
+4,Brooklyn,Park Slope,Boro Zone
+5,Queens,Astoria,Boro Zone
+6,Queens,Jamaica,Boro Zone
+7,Bronx,Fordham,Boro Zone
+8,Staten Island,St. George,Boro Zone

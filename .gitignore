@@ -1,0 +1,10 @@
+data/raw/*.parquet
+data/raw/*.csv
+*.duckdb
+target/
+dbt_packages/
+logs/
+.venv/
+__pycache__/
+.DS_Store
+.user.yml

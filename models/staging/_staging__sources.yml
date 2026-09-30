@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: nyc_taxi
+    meta:
+      external_location: "read_parquet('{{ var('raw_data_path') }}/yellow_tripdata_*.parquet', union_by_name=true)"
+    tables:
+      - name: yellow_trips
+        description: >
+          Raw NYC Yellow Taxi trip records, one row per trip, as published
+          monthly by the NYC Taxi & Limousine Commission. Loaded as an
+          external source over every yellow_tripdata_*.parquet file present
+          in {{ var('raw_data_path') }} -- see data/README.md for how to get
+          the real files (gitignored, not committed).
+
+  - name: nyc_taxi_zones
+    meta:
+      external_location: "read_csv('{{ var('raw_data_path') }}/taxi_zone_lookup.csv', header=true)"
+    tables:
+      - name: zone_lookup
+        description: >
+          TLC's official mapping of LocationID to borough/zone/service
+          zone. A single small reference file, not expected to change often
+          -- see snapshots/zone_demand_tier_snapshot.sql for the part of
+          this project that actually tracks change over time.

@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: stg_trips
+    description: >
+      One row per valid yellow taxi trip. Incrementally loaded -- each run
+      only processes trips with a pickup_datetime later than the max
+      already in the table, so re-running after a new month's file lands
+      doesn't reprocess prior months. Physically invalid rows (negative
+      fare, non-positive distance, dropoff before pickup, implausible
+      pickup date) are filtered out here, not downstream.
+    columns:
+      - name: trip_id
+        description: Surrogate key generated from vendor, pickup/dropoff timestamps, location IDs, and fare -- the raw data has no natural primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: vendor_id
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 6, 7]
+              config:
+                severity: warn
+      - name: pickup_datetime
+        data_tests:
+          - not_null
+      - name: dropoff_datetime
+        data_tests:
+          - not_null
+      - name: pickup_location_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_zones')
+                field: location_id
+      - name: dropoff_location_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_zones')
+                field: location_id
+      - name: payment_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6]
+              config:
+                severity: warn
+      - name: fare_amount
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+      - name: trip_distance
+        data_tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+  - name: stg_zones
+    description: Cleaned taxi zone lookup -- one row per LocationID.
+    columns:
+      - name: location_id
+        data_tests:
+          - unique
+          - not_null
+      - name: borough
+        data_tests:
+          - not_null

@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: int_trips_enriched
+    description: Trips joined to pickup/dropoff zone names and boroughs, with derived duration and tip percentage.
+    columns:
+      - name: trip_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_zone_monthly_demand
+    description: One row per pickup zone per month -- trip count, avg fare, avg duration, and a High/Medium/Low demand tier relative to that month's other zones.
+    columns:
+      - name: location_id
+        data_tests:
+          - not_null
+      - name: month
+        data_tests:
+          - not_null
+      - name: demand_tier
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["High", "Medium", "Low"]
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - location_id
+              - month
+
+  - name: int_zone_current_demand
+    description: int_zone_monthly_demand filtered to only the most recent month -- the "current state" that snapshots/zone_demand_tier_snapshot.sql tracks history for.
+    columns:
+      - name: location_id
+        data_tests:
+          - unique
+          - not_null
