@@ -2,34 +2,41 @@
 
 ## Download
 
-NYC TLC publishes trip data directly, no account or API key needed. Grab two consecutive months (the project is built and tested against January + February 2024, but any two consecutive months work the same way):
+NYC TLC publishes trip data directly, no account or API key needed. The project is built and verified against the full 2024 calendar year (12 files, ~50-60MB each):
 
 ```bash
 mkdir -p data/raw
-curl -L "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet" -o data/raw/yellow_tripdata_2024-01.parquet
-curl -L "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-02.parquet" -o data/raw/yellow_tripdata_2024-02.parquet
 curl -L "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv" -o data/raw/taxi_zone_lookup.csv
+for m in 01 02 03 04 05 06 07 08 09 10 11 12; do
+  curl -L "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-${m}.parquet" \
+    -o "data/raw/yellow_tripdata_2024-${m}.parquet"
+done
 ```
 
 Full file index (all months, all TLC trip types): [nyc.gov/site/tlc/about/tlc-trip-record-data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
 
-`data/raw/` is gitignored — each monthly file is ~50MB, not meant to be committed.
+`data/raw/` is gitignored — twelve files at ~50-60MB each, not meant to be committed.
 
-## Why two months, loaded one at a time
+## Load one month at a time, in order
 
-This project's incremental model (`models/staging/stg_trips.sql`) and SCD Type 2 snapshot (`snapshots/zone_demand_tier_snapshot.sql`) are only actually demonstrated by running the pipeline twice: once with just January present, then again after February is added. See the main [README.md](../README.md) for the real before/after numbers from doing exactly that. Loading both months at once and running once will still build everything correctly, but won't show the incremental/SCD2 behavior doing anything.
+This project's incremental model (`models/staging/stg_trips.sql`) and SCD Type 2 snapshot (`snapshots/zone_demand_tier_snapshot.sql`) are only actually demonstrated by running the pipeline once per month, in order — not by downloading everything and running once. See the main [README.md](../README.md) for the real results from doing exactly that across the full year, including three real bugs this process caught.
 
 ```bash
-# Stage 1: January only
 mkdir -p data/raw
-curl -L "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet" -o data/raw/yellow_tripdata_2024-01.parquet
 curl -L "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv" -o data/raw/taxi_zone_lookup.csv
-dbt build
 
-# Stage 2: February arrives
-curl -L "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-02.parquet" -o data/raw/yellow_tripdata_2024-02.parquet
-dbt build
+for m in 01 02 03 04 05 06 07 08 09 10 11 12; do
+  curl -L "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-${m}.parquet" \
+    -o "data/raw/yellow_tripdata_2024-${m}.parquet"
+  if [ "$m" = "01" ]; then
+    dbt build --full-refresh   # first month: the incremental model doesn't exist yet
+  else
+    dbt build                  # every month after: this is the actual incremental append
+  fi
+done
 ```
+
+Loading all twelve files at once and running `dbt build` a single time will still produce a correct final state — every trip in `fct_trips`, every zone's *current* demand tier — but the snapshot will only ever record one version per zone, since there's no prior run to compare against. The month-by-month history (which zones changed tier, and when) only exists if you load it the way it actually arrived.
 
 ## Sample
 

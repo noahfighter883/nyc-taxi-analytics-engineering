@@ -24,8 +24,24 @@ models:
               config:
                 severity: warn
       - name: pickup_datetime
+        description: >
+          Bounded to <= the max_valid_pickup_date var (2025-01-01 by
+          default) in stg_trips.sql -- found necessary after a
+          future-dated row (from the June 2024 file, timestamped 2026)
+          silently poisoned the incremental model's high-water mark and
+          caused six months of real data to be skipped on later runs. Not
+          bounded by current_date: on a dev machine whose system clock
+          doesn't match the data's real-world vintage, current_date
+          doesn't mean what it sounds like it means, and that's exactly
+          what let the 2026-dated rows through the first fix attempt. This
+          test is a second, independent check on the same invariant, using
+          the same var so it can't silently drift out of sync with the
+          model.
         data_tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "<= '{{ var(\"max_valid_pickup_date\") }}'"
       - name: dropoff_datetime
         data_tests:
           - not_null

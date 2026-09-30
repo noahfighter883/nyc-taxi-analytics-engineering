@@ -3,7 +3,7 @@ version: 2
 sources:
   - name: nyc_taxi
     meta:
-      external_location: "read_parquet('{{ var('raw_data_path') }}/yellow_tripdata_*.parquet', union_by_name=true)"
+      external_location: "read_parquet('{{ var('raw_data_path') }}/yellow_tripdata_*.parquet', union_by_name=true, filename=true)"
     tables:
       - name: yellow_trips
         description: >
@@ -11,7 +11,10 @@ sources:
           monthly by the NYC Taxi & Limousine Commission. Loaded as an
           external source over every yellow_tripdata_*.parquet file present
           in {{ var('raw_data_path') }} -- see data/README.md for how to get
-          the real files (gitignored, not committed).
+          the real files (gitignored, not committed). filename=true exposes
+          each row's source file, which stg_trips.sql uses to validate a
+          row actually belongs to the month its file claims to represent --
+          see the comment there for why that check exists.
 
   - name: nyc_taxi_zones
     meta:

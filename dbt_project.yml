@@ -19,6 +19,17 @@ vars:
   # .github/workflows/ci.yml.
   raw_data_path: "data/raw"
 
+  # Upper bound for a valid pickup_datetime in stg_trips.sql, used instead
+  # of current_date deliberately: current_date means "today, wherever this
+  # pipeline happens to run," not "today relative to when this data was
+  # collected" -- those are the same thing in most production setups, but
+  # NOT on a dev machine whose system clock is set to a different point in
+  # time than the data's real-world vintage, which is exactly what this
+  # project's clock does (2026, loading 2024 files). A hardcoded, explicit
+  # bound tied to the dataset itself doesn't have that failure mode. Bump
+  # this if the project is extended to load data past 2024.
+  max_valid_pickup_date: "2025-01-01"
+
 models:
   nyc_taxi_analytics:
     staging:
